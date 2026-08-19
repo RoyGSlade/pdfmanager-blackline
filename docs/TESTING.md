@@ -29,6 +29,19 @@ Playwright covers:
 - primary mode navigation and the privacy dialog;
 - proof-pass export, browser download, and reopening the downloaded PDF.
 
+By default, Playwright starts the local Vite server. Set `PLAYWRIGHT_BASE_URL`
+to exercise an already-deployed build instead:
+
+```bash
+PLAYWRIGHT_BASE_URL=https://roygslade.github.io/pdfmanager-blackline/ npm run test:e2e
+```
+
+```powershell
+$env:PLAYWRIGHT_BASE_URL = 'https://roygslade.github.io/pdfmanager-blackline/'
+npm run test:e2e
+Remove-Item Env:PLAYWRIGHT_BASE_URL
+```
+
 All PDF fixtures are generated from source. Do not commit customer documents.
 
 ## Manual compatibility charter
@@ -52,7 +65,9 @@ tests until their implementations and acceptance criteria exist.
 `.github/workflows/ci.yml` uses Node 22, installs with `npm ci`, installs the
 Playwright Chromium runtime, and runs typecheck, Vitest, Playwright, and the
 production build. A failing gate blocks the build from being treated as
-shareable.
+shareable. The Pages workflow repeats the release checks, deploys the static
+artifact, and runs the same Playwright PDF journey against the resulting public
+URL.
 
 ## Failure invariants
 
