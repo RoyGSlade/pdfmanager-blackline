@@ -19,6 +19,7 @@ export const DocumentCanvas: React.FC = () => {
   const [activeDrawingId, setActiveDrawingId] = useState<string | null>(null);
   const [isCreatingShape, setIsCreatingShape] = useState(false);
   const [creationStart, setCreationStart] = useState<Point | null>(null);
+  const [creationPageId, setCreationPageId] = useState<string | null>(null);
   const [draggedObjectId, setDraggedObjectId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<Point>({ x: 0, y: 0 });
   const [resizingHandle, setResizingHandle] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export const DocumentCanvas: React.FC = () => {
       ) {
         setIsCreatingShape(true);
         setCreationStart({ x: clickX, y: clickY });
+        setCreationPageId(page.pageId);
       }
     } else {
       setSelectedObjects([]);
@@ -156,7 +158,7 @@ export const DocumentCanvas: React.FC = () => {
   };
 
   // Handle pointer up
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
     if (activeDrawingId) setActiveDrawingId(null);
     if (draggedObjectId) setDraggedObjectId(null);
     if (resizingHandle) {
@@ -164,15 +166,14 @@ export const DocumentCanvas: React.FC = () => {
       setResizeInitial(null);
     }
     if (isCreatingShape && creationStart) {
-      const activePage = state.pages.find(p => p.pageId === state.selectedPageId) || state.pages[0];
+      const activePage = state.pages.find(p => p.pageId === creationPageId);
       if (activePage) {
         const pageEl = document.getElementById(`page-wrapper-${activePage.pageId}`);
         if (pageEl) {
           const rect = pageEl.getBoundingClientRect();
-          const curEl = containerRef.current;
-          if (curEl) {
-            const endX = (window.event as MouseEvent ? (window.event as MouseEvent).clientX - rect.left : 0) / state.zoom;
-            const endY = (window.event as MouseEvent ? (window.event as MouseEvent).clientY - rect.top : 0) / state.zoom;
+          {
+            const endX = (e.clientX - rect.left) / state.zoom;
+            const endY = (e.clientY - rect.top) / state.zoom;
 
             const width = Math.max(10, Math.abs(endX - creationStart.x));
             const height = Math.max(10, Math.abs(endY - creationStart.y));
@@ -205,12 +206,26 @@ export const DocumentCanvas: React.FC = () => {
                 opacity: 0.35,
               });
               setSelectedObjects([id]);
+            } else if (state.activeTool === 'line' || state.activeTool === 'arrow') {
+              const id = addObject({
+                pageId: activePage.pageId,
+                type: state.activeTool,
+                x: Math.round(x),
+                y: Math.round(y),
+                width: Math.round(width),
+                height: Math.round(height),
+                strokeColor: '#000000',
+                strokeWidth: 2,
+                opacity: 1.0,
+              });
+              setSelectedObjects([id]);
             }
           }
         }
       }
       setIsCreatingShape(false);
       setCreationStart(null);
+      setCreationPageId(null);
     }
   };
 
@@ -327,7 +342,7 @@ const PageCanvasItem: React.FC<PageCanvasItemProps> = ({
   return (
     <div
       id={`page-wrapper-${page.pageId}`}
-      onClick={(e) => {
+      onMouseDown={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         onPageMouseDown(e, page, rect);
       }}

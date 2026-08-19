@@ -21,7 +21,40 @@ import {
   VerificationReport,
 } from '../types';
 import { computeSha256 } from '../utils/crypto';
-import { getPdfJsDocument } from './pdfRenderer';
+
+/** Stable error codes for callers that need to distinguish user/input failures
+ * from a broken source file or an exporter regression. */
+export type PdfEngineErrorCode =
+  | 'INVALID_INPUT'
+  | 'INVALID_SOURCE'
+  | 'INVALID_PAGE_GRAPH'
+  | 'UNSUPPORTED_OVERLAY'
+  | 'EXPORT_FAILED'
+  | 'VERIFICATION_FAILED';
+
+export class PdfEngineError extends Error {
+  readonly name = 'PdfEngineError';
+
+  constructor(
+    readonly code: PdfEngineErrorCode,
+    message: string,
+    readonly cause?: unknown,
+  ) {
+    super(message);
+  }
+}
+
+function engineError(
+  code: PdfEngineErrorCode,
+  message: string,
+  cause?: unknown,
+): PdfEngineError {
+  return new PdfEngineError(code, message, cause);
+}
+
+function cloneBytes(bytes: Uint8Array): Uint8Array {
+  return new Uint8Array(bytes);
+}
 
 export interface DocumentInspection {
   pageCount: number;
@@ -55,8 +88,21 @@ export async function inspectPdfDocument(
   fileName: string,
   bytes: Uint8Array
 ): Promise<{ sourceDoc: SourceDocument; inspection: DocumentInspection }> {
-  const sha256 = await computeSha256(bytes);
-  const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0) {
+    throw engineError('INVALID_INPUT', 'A non-empty Uint8Array is required to inspect a PDF.');
+  }
+
+  // PDFDocument.load may retain references to its input. Keep the source
+  // immutable by hashing and storing a private copy rather than the caller's
+  // mutable buffer.
+  const sourceBytes = cloneBytes(bytes);
+  const sha256 = await computeSha256(sourceBytes);
+  let pdfDoc: PDFDocument;
+  try {
+    pdfDoc = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
+  } catch (error) {
+    throw engineError('INVALID_SOURCE', `Unable to parse PDF source${fileName ? ` "${fileName}"` : ''}.`, error);
+  }
   
   const pageCount = pdfDoc.getPageCount();
   const pagesInfo: { width: number; height: number; rotation: number }[] = [];
@@ -117,7 +163,7 @@ export async function inspectPdfDocument(
     fileName,
     fileSize: bytes.byteLength,
     sha256,
-    bytes,
+    bytes: sourceBytes,
     pageCount,
     encrypted: false,
     uploadedAt: Date.now(),
@@ -136,6 +182,94 @@ export async function inspectPdfDocument(
   return { sourceDoc, inspection };
 }
 
+function validateSourceDocuments(sources: SourceDocument[]): Map<string, SourceDocument> {
+  if (!Array.isArray(sources) || sources.length === 0) {
+    throw engineError('INVALID_SOURCE', 'At least one PDF source is required for export.');
+  }
+
+  const sourceMap = new Map<string, SourceDocument>();
+  for (const source of sources) {
+    if (!source || !source.sourceId || !(source.bytes instanceof Uint8Array) || source.bytes.byteLength === 0) {
+      throw engineError('INVALID_SOURCE', 'Every source must have a non-empty Uint8Array and sourceId.');
+    }
+    if (sourceMap.has(source.sourceId)) {
+      throw engineError('INVALID_SOURCE', `Duplicate sourceId "${source.sourceId}".`);
+    }
+    sourceMap.set(source.sourceId, source);
+  }
+  return sourceMap;
+}
+
+function validatePageGraph(
+  pages: PageNode[],
+  sourceMap: Map<string, SourceDocument>,
+): void {
+  if (!Array.isArray(pages) || pages.length === 0) {
+    throw engineError('INVALID_PAGE_GRAPH', 'The export page graph must contain at least one page.');
+  }
+
+  const pageIds = new Set<string>();
+  for (const page of pages) {
+    if (!page || !page.pageId || pageIds.has(page.pageId)) {
+      throw engineError('INVALID_PAGE_GRAPH', 'Every page must have a unique pageId.');
+    }
+    pageIds.add(page.pageId);
+    if (![0, 90, 180, 270].includes(page.rotationDelta)) {
+      throw engineError('INVALID_PAGE_GRAPH', `Page "${page.pageId}" has an invalid rotation.`);
+    }
+    if (!Number.isFinite(page.width) || page.width <= 0 || !Number.isFinite(page.height) || page.height <= 0) {
+      throw engineError('INVALID_PAGE_GRAPH', `Page "${page.pageId}" has invalid dimensions.`);
+    }
+    if (page.isBlank || page.sourceId === 'blank') continue;
+
+    const source = sourceMap.get(page.sourceId);
+    if (!source) {
+      throw engineError('INVALID_PAGE_GRAPH', `Page "${page.pageId}" references missing source "${page.sourceId}".`);
+    }
+    if (!Number.isInteger(page.sourcePageIndex) || page.sourcePageIndex < 0 || page.sourcePageIndex >= source.pageCount) {
+      throw engineError(
+        'INVALID_PAGE_GRAPH',
+        `Page "${page.pageId}" references source page ${page.sourcePageIndex}, but source has ${source.pageCount} page(s).`,
+      );
+    }
+  }
+}
+
+function selectPages(pages: PageNode[], settings: ExportSettings): PageNode[] {
+  if (settings.pageRange === 'all') return pages;
+
+  const requested = settings.customPages;
+  if (settings.pageRange === 'custom' && (!requested || requested.length === 0)) {
+    throw engineError('INVALID_PAGE_GRAPH', 'custom page range requires at least one 1-based page number.');
+  }
+  if (requested && requested.length > 0) {
+    if (requested.some(pageNumber => !Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > pages.length)) {
+      throw engineError('INVALID_PAGE_GRAPH', 'customPages must contain valid 1-based page numbers.');
+    }
+    const requestedSet = new Set(requested);
+    return pages.filter((_, index) => requestedSet.has(index + 1));
+  }
+
+  // The settings shape has no selected page id. In the absence of an explicit
+  // list, `current` deterministically means the first page in the graph.
+  return pages.slice(0, 1);
+}
+
+function overlayBoundsAreValid(obj: OverlayObject): boolean {
+  return [obj.x, obj.y, obj.width, obj.height].every(Number.isFinite) && obj.width >= 0 && obj.height >= 0;
+}
+
+function imageMimeType(dataUrl: string): 'png' | 'jpg' {
+  const match = /^data:image\/(png|jpe?g);base64,/i.exec(dataUrl);
+  if (!match) {
+    throw engineError(
+      'UNSUPPORTED_OVERLAY',
+      'Only base64 PNG and JPEG image/signature overlays can be exported. Convert SVG or another format before adding it.',
+    );
+  }
+  return match[1].toLowerCase() === 'png' ? 'png' : 'jpg';
+}
+
 export async function exportModifiedPdf(
   sources: SourceDocument[],
   pages: PageNode[],
@@ -143,26 +277,59 @@ export async function exportModifiedPdf(
   formValues: Record<string, string | boolean>,
   settings: ExportSettings
 ): Promise<{ pdfBytes: Uint8Array; verification: VerificationReport }> {
+  if (!settings || settings.format !== 'final' || settings.quality !== 'balanced' || settings.flattenForms !== true) {
+    throw engineError('INVALID_INPUT', 'Export settings must include a valid format and quality.');
+  }
+  const sourceMap = validateSourceDocuments(sources);
+  validatePageGraph(pages, sourceMap);
+  if (!Array.isArray(objects)) {
+    throw engineError('INVALID_INPUT', 'Overlay objects must be an array.');
+  }
+  const pagesToProcess = selectPages(pages, settings);
+  if (pagesToProcess.length === 0) {
+    throw engineError('INVALID_PAGE_GRAPH', 'The selected page range contains no pages.');
+  }
+
   // 1. Create fresh PDFDocument for safe isolated composition
-  const outputDoc = await PDFDocument.create();
+  let outputDoc: PDFDocument;
+  try {
+    outputDoc = await PDFDocument.create();
+  } catch (error) {
+    throw engineError('EXPORT_FAILED', 'Unable to create output PDF document.', error);
+  }
   
   // Standard fonts
   const fontHelvetica = await outputDoc.embedFont(StandardFonts.Helvetica);
   const fontHelveticaBold = await outputDoc.embedFont(StandardFonts.HelveticaBold);
   const fontTimesRoman = await outputDoc.embedFont(StandardFonts.TimesRoman);
+  const fontTimesRomanItalic = await outputDoc.embedFont(StandardFonts.TimesRomanItalic);
+  const fontTimesRomanBold = await outputDoc.embedFont(StandardFonts.TimesRomanBold);
   const fontCourier = await outputDoc.embedFont(StandardFonts.Courier);
+  const fontCourierBold = await outputDoc.embedFont(StandardFonts.CourierBold);
 
   const fontMap: Record<string, any> = {
     'Helvetica': fontHelvetica,
     'Helvetica-Bold': fontHelveticaBold,
     'Times-Roman': fontTimesRoman,
+    'Times-Roman-Bold': fontTimesRomanBold,
+    'Times-Roman-Italic': fontTimesRomanItalic,
     'Courier': fontCourier,
+    'Courier-Bold': fontCourierBold,
   };
 
   // Map to cache loaded source documents to copy pages quickly
   const sourceDocMap = new Map<string, PDFDocument>();
+  const sourceHashes = new Map<string, string>();
   for (const src of sources) {
-    const loadedSrc = await PDFDocument.load(src.bytes);
+    sourceHashes.set(src.sourceId, await computeSha256(src.bytes));
+    let loadedSrc: PDFDocument;
+    try {
+      // Loading a clone prevents any future pdf-lib mutation from changing the
+      // bytes retained by the project state.
+      loadedSrc = await PDFDocument.load(cloneBytes(src.bytes));
+    } catch (error) {
+      throw engineError('INVALID_SOURCE', `Unable to parse source "${src.fileName || src.sourceId}" during export.`, error);
+    }
     // Apply form values on source if needed
     try {
       const srcForm = loadedSrc.getForm();
@@ -189,12 +356,6 @@ export async function exportModifiedPdf(
     sourceDocMap.set(src.sourceId, loadedSrc);
   }
 
-  // Determine pages to include based on settings
-  let pagesToProcess = pages;
-  if (settings.pageRange === 'custom' && settings.customPages && settings.customPages.length > 0) {
-    pagesToProcess = pages.filter((_, idx) => settings.customPages!.includes(idx + 1));
-  }
-
   // Materialize Virtual Page Graph
   for (let i = 0; i < pagesToProcess.length; i++) {
     const pageNode = pagesToProcess[i];
@@ -205,8 +366,12 @@ export async function exportModifiedPdf(
       outputPage = outputDoc.addPage([pageNode.width || 612, pageNode.height || 792]);
     } else {
       const srcDoc = sourceDocMap.get(pageNode.sourceId)!;
-      const [copiedPage] = await outputDoc.copyPages(srcDoc, [pageNode.sourcePageIndex]);
-      outputPage = outputDoc.addPage(copiedPage);
+      try {
+        const [copiedPage] = await outputDoc.copyPages(srcDoc, [pageNode.sourcePageIndex]);
+        outputPage = outputDoc.addPage(copiedPage);
+      } catch (error) {
+        throw engineError('EXPORT_FAILED', `Unable to copy source page ${pageNode.sourcePageIndex} for "${pageNode.pageId}".`, error);
+      }
     }
 
     // Apply rotation delta
@@ -223,6 +388,9 @@ export async function exportModifiedPdf(
       .sort((a, b) => a.zIndex - b.zIndex);
 
     for (const obj of pageObjects) {
+      if (!overlayBoundsAreValid(obj)) {
+        throw engineError('INVALID_INPUT', `Overlay "${obj.id}" has invalid position or dimensions.`);
+      }
       // In PDF coordinate space, (0, 0) is bottom-left
       // obj.y in our model is from top-left, so pdfY = pHeight - obj.y - obj.height
       const pdfX = obj.x;
@@ -230,7 +398,14 @@ export async function exportModifiedPdf(
 
       try {
         if (obj.type === 'text' && obj.text) {
-          const font = obj.fontWeight === 'bold' ? fontHelveticaBold : fontHelvetica;
+          const requestedFamily = obj.fontFamily || 'Helvetica';
+          const family = requestedFamily === 'Times-Roman' || requestedFamily === 'Courier' ? requestedFamily : 'Helvetica';
+          const fontKey = family === 'Helvetica'
+            ? (obj.fontWeight === 'bold' ? 'Helvetica-Bold' : 'Helvetica')
+            : family === 'Times-Roman'
+              ? (obj.fontStyle === 'italic' ? 'Times-Roman-Italic' : obj.fontWeight === 'bold' ? 'Times-Roman-Bold' : 'Times-Roman')
+              : (obj.fontWeight === 'bold' ? 'Courier-Bold' : 'Courier');
+          const font = fontMap[fontKey];
           const fontSize = obj.fontSize || 12;
           const { r, g, b } = parseColor(obj.fontColor || '#000000');
           const opacity = obj.opacity ?? 1.0;
@@ -254,8 +429,14 @@ export async function exportModifiedPdf(
           let currentY = pHeight - obj.y - fontSize;
 
           for (const line of lines) {
+            const textWidth = font.widthOfTextAtSize(line, fontSize);
+            const textX = obj.textAlign === 'center'
+              ? pdfX + Math.max(0, (obj.width - textWidth) / 2)
+              : obj.textAlign === 'right'
+                ? pdfX + Math.max(0, obj.width - textWidth)
+                : pdfX;
             outputPage.drawText(line, {
-              x: pdfX,
+              x: textX,
               y: currentY,
               size: fontSize,
               font,
@@ -305,31 +486,48 @@ export async function exportModifiedPdf(
             color: rgb(color.r, color.g, color.b),
             opacity,
           });
-        } else if (obj.type === 'checkmark') {
+        } else if (obj.type === 'checkmark' || obj.type === 'arrow') {
           const color = parseColor(obj.strokeColor || '#10B981');
           const strokeWidth = obj.strokeWidth || 3;
-          // Draw a clean checkmark vector
-          outputPage.drawLine({
-            start: { x: pdfX, y: pdfY + obj.height * 0.4 },
-            end: { x: pdfX + obj.width * 0.35, y: pdfY },
-            thickness: strokeWidth,
-            color: rgb(color.r, color.g, color.b),
-          });
-          outputPage.drawLine({
-            start: { x: pdfX + obj.width * 0.35, y: pdfY },
-            end: { x: pdfX + obj.width, y: pdfY + obj.height },
-            thickness: strokeWidth,
-            color: rgb(color.r, color.g, color.b),
-          });
-        } else if ((obj.type === 'image' || obj.type === 'signature') && obj.imageDataUrl) {
+          if (obj.type === 'checkmark') {
+            // Draw a clean checkmark vector
+            outputPage.drawLine({
+              start: { x: pdfX, y: pdfY + obj.height * 0.4 },
+              end: { x: pdfX + obj.width * 0.35, y: pdfY },
+              thickness: strokeWidth,
+              color: rgb(color.r, color.g, color.b),
+            });
+            outputPage.drawLine({
+              start: { x: pdfX + obj.width * 0.35, y: pdfY },
+              end: { x: pdfX + obj.width, y: pdfY + obj.height },
+              thickness: strokeWidth,
+              color: rgb(color.r, color.g, color.b),
+            });
+          } else {
+            const start = { x: pdfX, y: pdfY };
+            const end = { x: pdfX + obj.width, y: pdfY + obj.height };
+            outputPage.drawLine({ start, end, thickness: strokeWidth, color: rgb(color.r, color.g, color.b), opacity: obj.opacity ?? 1 });
+            const angle = Math.atan2(end.y - start.y, end.x - start.x);
+            const head = Math.min(12, Math.max(5, strokeWidth * 3));
+            for (const wing of [angle + Math.PI * 0.8, angle - Math.PI * 0.8]) {
+              outputPage.drawLine({
+                start: end,
+                end: { x: end.x - Math.cos(wing) * head, y: end.y - Math.sin(wing) * head },
+                thickness: strokeWidth,
+                color: rgb(color.r, color.g, color.b),
+                opacity: obj.opacity ?? 1,
+              });
+            }
+          }
+        } else if (obj.type === 'image' || obj.type === 'signature') {
+          if (!obj.imageDataUrl) {
+            throw engineError('INVALID_INPUT', `${obj.type} overlay "${obj.id}" is missing imageDataUrl.`);
+          }
           try {
             const dataUrl = obj.imageDataUrl;
-            let imageEmbed;
-            if (dataUrl.includes('image/png')) {
-              imageEmbed = await outputDoc.embedPng(dataUrl);
-            } else {
-              imageEmbed = await outputDoc.embedJpg(dataUrl);
-            }
+            const imageEmbed = imageMimeType(dataUrl) === 'png'
+              ? await outputDoc.embedPng(dataUrl)
+              : await outputDoc.embedJpg(dataUrl);
 
             outputPage.drawImage(imageEmbed, {
               x: pdfX,
@@ -339,7 +537,8 @@ export async function exportModifiedPdf(
               opacity: obj.opacity ?? 1.0,
             });
           } catch (imgErr) {
-            console.warn('Image embed note:', imgErr);
+            if (imgErr instanceof PdfEngineError) throw imgErr;
+            throw engineError('UNSUPPORTED_OVERLAY', `Unable to embed ${obj.type} overlay "${obj.id}".`, imgErr);
           }
         } else if (obj.type === 'freehand' && obj.points && obj.points.length > 1) {
           const color = parseColor(obj.strokeColor || '#000000');
@@ -357,26 +556,27 @@ export async function exportModifiedPdf(
               opacity,
             });
           }
+        } else if (obj.type !== 'text') {
+          throw engineError('UNSUPPORTED_OVERLAY', `Overlay type "${obj.type}" cannot be exported.`);
         }
       } catch (objErr) {
-        console.warn('Object rendering note:', objErr);
+        if (objErr instanceof PdfEngineError) throw objErr;
+        throw engineError('EXPORT_FAILED', `Unable to render overlay "${obj.id}" (${obj.type}).`, objErr);
       }
     }
   }
 
-  // Flatten forms if requested
-  if (settings.flattenForms || settings.format === 'final') {
-    try {
-      const form = outputDoc.getForm();
-      form.flatten();
-    } catch {
-      // no form to flatten
-    }
+  // The MVP exports one proven profile: a flattened copy.
+  try {
+    const form = outputDoc.getForm();
+    form.flatten();
+  } catch {
+    // no form to flatten
   }
 
   // Save PDF bytes
   const pdfBytes = await outputDoc.save({
-    useObjectStreams: settings.quality !== 'small',
+    useObjectStreams: true,
   });
 
   // Proof Pass Verification Step
@@ -416,7 +616,7 @@ export async function exportModifiedPdf(
   let originalSafe = true;
   for (const src of sources) {
     const currentSrcHash = await computeSha256(src.bytes);
-    if (currentSrcHash !== src.sha256) {
+    if (currentSrcHash !== sourceHashes.get(src.sourceId)) {
       originalSafe = false;
     }
   }

@@ -101,6 +101,7 @@ export const Shell: React.FC<ShellProps> = ({
             }}
             className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-white/15 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer shrink-0"
             title="Return to Home Screen"
+            aria-label="Return to PDFManager home"
           >
             <span className="w-5 h-5 rounded-full border border-white flex items-center justify-center font-serif italic text-xs font-semibold">
               U
@@ -132,6 +133,7 @@ export const Shell: React.FC<ShellProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
             title="Open another PDF"
+            aria-label="Open another PDF"
           >
             <FolderOpen className="w-4 h-4" />
           </button>
@@ -148,6 +150,7 @@ export const Shell: React.FC<ShellProps> = ({
                 : 'text-white/20 cursor-not-allowed'
             }`}
             title="Undo (Ctrl+Z)"
+            aria-label="Undo last edit"
           >
             <Undo2 className="w-4 h-4" />
           </button>
@@ -161,6 +164,7 @@ export const Shell: React.FC<ShellProps> = ({
                 : 'text-white/20 cursor-not-allowed'
             }`}
             title="Redo (Ctrl+Y)"
+            aria-label="Redo last edit"
           >
             <Redo2 className="w-4 h-4" />
           </button>
@@ -178,15 +182,16 @@ export const Shell: React.FC<ShellProps> = ({
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   autoFocus
+                  aria-label="Find text in document"
                   className="bg-transparent text-white font-mono focus:outline-none w-28 lg:w-36 text-xs placeholder:text-white/30"
                 />
                 {searchResults.length > 0 && (
                   <div className="flex items-center gap-1 ml-2 text-[10px] font-mono text-white/50">
                     <span>{activeSearchIndex + 1}/{searchResults.length}</span>
-                    <button onClick={goToPrevMatch} className="hover:text-white p-0.5 cursor-pointer">
+                    <button onClick={goToPrevMatch} aria-label="Previous search result" className="hover:text-white p-0.5 cursor-pointer">
                       <ChevronUp className="w-3 h-3" />
                     </button>
-                    <button onClick={goToNextMatch} className="hover:text-white p-0.5 cursor-pointer">
+                    <button onClick={goToNextMatch} aria-label="Next search result" className="hover:text-white p-0.5 cursor-pointer">
                       <ChevronDown className="w-3 h-3" />
                     </button>
                   </div>
@@ -197,6 +202,7 @@ export const Shell: React.FC<ShellProps> = ({
                     setSearchQuery('');
                   }}
                   className="ml-2 text-white/40 hover:text-white cursor-pointer"
+                  aria-label="Close document search"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -206,6 +212,7 @@ export const Shell: React.FC<ShellProps> = ({
                 onClick={() => setIsSearchOpen(true)}
                 className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
                 title="Search Text in Document"
+                aria-label="Search text in document"
               >
                 <Search className="w-4 h-4" />
               </button>
@@ -220,6 +227,7 @@ export const Shell: React.FC<ShellProps> = ({
               onClick={() => handleZoomChange(-0.15)}
               className="p-1 rounded-full hover:bg-white/10 text-white/60 hover:text-white cursor-pointer"
               title="Zoom Out"
+              aria-label="Zoom out"
             >
               <ZoomOut className="w-3 h-3" />
             </button>
@@ -230,6 +238,7 @@ export const Shell: React.FC<ShellProps> = ({
               onClick={() => handleZoomChange(0.15)}
               className="p-1 rounded-full hover:bg-white/10 text-white/60 hover:text-white cursor-pointer"
               title="Zoom In"
+              aria-label="Zoom in"
             >
               <ZoomIn className="w-3 h-3" />
             </button>
@@ -237,6 +246,7 @@ export const Shell: React.FC<ShellProps> = ({
               onClick={() => setZoom(1.0)}
               className="px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-white/50 hover:text-white cursor-pointer"
               title="Reset 100%"
+              aria-label="Reset zoom to 100 percent"
             >
               1:1
             </button>
@@ -250,6 +260,7 @@ export const Shell: React.FC<ShellProps> = ({
             onClick={onOpenShortcuts}
             className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
             title="Keyboard Shortcuts"
+            aria-label="Open keyboard shortcuts"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
@@ -258,6 +269,7 @@ export const Shell: React.FC<ShellProps> = ({
             onClick={onOpenDocInfo}
             className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
             title="Document Metadata & Inspection"
+            aria-label="Open document metadata"
           >
             <Info className="w-4 h-4" />
           </button>
@@ -308,7 +320,7 @@ export const Shell: React.FC<ShellProps> = ({
                 ? 'bg-white text-black shadow-lg scale-105'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
-            title="Fill AcroForms & Place Signatures"
+            title="Fill detected fields and place signatures"
           >
             <PenTool className="w-4 h-4" />
             <span className="text-[8px] uppercase tracking-widest font-mono font-medium">Sign</span>
@@ -375,13 +387,6 @@ export const Shell: React.FC<ShellProps> = ({
 
           <span className="text-white/15">•</span>
 
-          <div className="flex items-center gap-2 text-white/70">
-            <span className="w-1.5 h-1.5 rounded-full bg-white/60" />
-            <span className="uppercase tracking-[0.15em]">RECOVERY CURRENT</span>
-          </div>
-
-          <span className="text-white/15">•</span>
-
           <div className="text-white/60 uppercase tracking-[0.15em]">
             <span>{state.editCount} {state.editCount === 1 ? 'EDIT' : 'EDITS'}</span>
           </div>
@@ -390,7 +395,7 @@ export const Shell: React.FC<ShellProps> = ({
 
           <div className="hidden sm:flex items-center gap-1.5 text-white/50">
             <Lock className="w-3 h-3 text-emerald-400" />
-            <span className="uppercase tracking-[0.15em]">LOCAL ONLY</span>
+            <span className="uppercase tracking-[0.15em]">NO UPLOAD</span>
           </div>
         </div>
 

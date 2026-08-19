@@ -73,15 +73,11 @@ interface EditorContextType {
   goToNextMatch: () => void;
   goToPrevMatch: () => void;
   
-  // Recovery
-  hasRecoveryData: boolean;
-  restoreFromRecovery: () => void;
-  clearRecoveryData: () => void;
 }
 
-const STORAGE_KEY_RECOVERY = 'pdfmanager_blackline_recovery_v1';
 const STORAGE_KEY_SIGNATURES = 'pdfmanager_blackline_signatures_v1';
 const MAX_HISTORY = 35;
+const MAX_FILE_BYTES = 100 * 1024 * 1024;
 
 const initialProjectState: ProjectState = {
   version: 1,
@@ -112,7 +108,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchMatch[]>([]);
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
-  const [hasRecoveryData, setHasRecoveryData] = useState(false);
 
   // Push history entry
   const pushHistory = useCallback((pages: PageNode[], objects: OverlayObject[], formValues: Record<string, string | boolean>, desc = 'Edit') => {
@@ -192,11 +187,19 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSearchResults([]);
     } catch (err) {
       console.error('Failed to open PDF:', err);
-      alert('Failed to open PDF: The file might be corrupted or in an unsupported format.');
+      throw err instanceof Error
+        ? err
+        : new Error('The PDF could not be opened because it is damaged or unsupported.');
     }
   }, []);
 
   const openDocumentFromFile = useCallback(async (file: File) => {
+    if (file.size === 0) {
+      throw new Error('The selected PDF is empty.');
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      throw new Error('This MVP supports PDFs up to 100 MB.');
+    }
     const arrayBuffer = await file.arrayBuffer();
     await openDocumentFromBytes(file.name, new Uint8Array(arrayBuffer));
   }, [openDocumentFromBytes]);
@@ -208,26 +211,18 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     await openDocumentFromBytes(`${preset.title}.pdf`, bytes);
   }, [openDocumentFromBytes]);
 
-  // Load saved signatures & initialize default workbench document on mount
+  // Load device-local preferences. Documents only open after an explicit user action.
   useEffect(() => {
     try {
       const sigsJson = localStorage.getItem(STORAGE_KEY_SIGNATURES);
       if (sigsJson) {
         setSavedSignatures(JSON.parse(sigsJson));
       }
-      const recJson = localStorage.getItem(STORAGE_KEY_RECOVERY);
-      if (recJson) {
-        setHasRecoveryData(true);
-      }
     } catch (e) {
       console.warn('Storage init note:', e);
     }
 
-    // Auto-load default sample document on initial launch so workbench is immediately active
-    loadSample('w9-form').catch(err => {
-      console.warn('Auto sample load note:', err);
-    });
-  }, [loadSample]);
+  }, []);
 
   const insertExternalPdf = useCallback(async (file: File) => {
     try {
@@ -621,34 +616,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setState(prev => ({ ...prev, selectedPageId: searchResults[prevIdx].pageId }));
   }, [activeSearchIndex, searchResults]);
 
-  // Recovery
-  const restoreFromRecovery = useCallback(() => {
-    try {
-      const recJson = localStorage.getItem(STORAGE_KEY_RECOVERY);
-      if (!recJson) return;
-      const rec = JSON.parse(recJson);
-      // Load sample preset to reconstruct source if needed
-      loadSample('w9-form').then(() => {
-        setState(prev => ({
-          ...prev,
-          projectName: rec.projectName || prev.projectName,
-          pages: rec.pages || prev.pages,
-          objects: rec.objects || prev.objects,
-          formValues: rec.formValues || prev.formValues,
-          editCount: rec.editCount || prev.editCount,
-          isDirty: true,
-        }));
-      });
-    } catch (e) {
-      console.error('Recovery failed:', e);
-    }
-  }, [loadSample]);
-
-  const clearRecoveryData = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY_RECOVERY);
-    setHasRecoveryData(false);
-  }, []);
-
   return (
     <EditorContext.Provider
       value={{
@@ -693,9 +660,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setSearchQuery,
         goToNextMatch,
         goToPrevMatch,
-        hasRecoveryData,
-        restoreFromRecovery,
-        clearRecoveryData,
       }}
     >
       {children}

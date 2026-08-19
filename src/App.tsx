@@ -56,7 +56,7 @@ const WorkbenchContent: React.FC = () => {
       }
 
       // Save / Export
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !isInputActive) {
         e.preventDefault();
         setIsExportOpen(true);
       }

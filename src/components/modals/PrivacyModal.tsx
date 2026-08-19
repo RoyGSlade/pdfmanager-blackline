@@ -10,8 +10,8 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none">
-      <div className="bg-[#050505] border border-white/15 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none" role="presentation">
+      <div className="bg-[#050505] border border-white/15 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="privacy-dialog-title">
         
         {/* Header */}
         <div className="h-16 px-8 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
@@ -23,7 +23,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
               <span className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-mono block">
                 Security Architecture
               </span>
-              <h3 className="text-base font-serif italic text-white font-normal">
+              <h3 id="privacy-dialog-title" className="text-base font-serif italic text-white font-normal">
                 Local-First & Immutability
               </h3>
             </div>
@@ -31,6 +31,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
           <button
             onClick={onClose}
             className="text-white/40 hover:text-white p-2 rounded-full hover:bg-white/10 cursor-pointer"
+            aria-label="Close privacy details"
           >
             <X className="w-4 h-4" />
           </button>
@@ -42,9 +43,9 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
           <div className="p-4 bg-white/[0.02] border border-white/15 rounded-2xl text-emerald-400 flex items-center gap-3.5">
             <ShieldCheck className="w-6 h-6 shrink-0" />
             <div>
-              <div className="font-serif italic text-base text-white">Zero Document Egress Guarantee</div>
+              <div className="font-serif italic text-base text-white">Local Processing</div>
               <div className="text-[11px] text-white/50 mt-1 font-light leading-relaxed">
-                Documents stay entirely in memory on this machine. No remote PDF manipulation or telemetry.
+                Your selected PDF is processed in this browser. The app does not send the document to a PDF service.
               </div>
             </div>
           </div>
@@ -63,22 +64,13 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
             <div className="flex items-start gap-3.5">
               <WifiOff className="w-4 h-4 text-white shrink-0 mt-0.5" />
               <div>
-                <span className="text-white font-semibold">2. Pure Offline Operation</span>
+                <span className="text-white font-semibold">2. No Document Upload</span>
                 <p className="text-white/40 text-[11px] mt-0.5 font-light leading-relaxed">
-                  PDFManager contains zero analytics, tracking beacons, or remote cloud processing servers.
+                  The editing workflow does not upload your PDF to a cloud processing service.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3.5">
-              <Lock className="w-4 h-4 text-white shrink-0 mt-0.5" />
-              <div>
-                <span className="text-white font-semibold">3. Local Recovery Vault</span>
-                <p className="text-white/40 text-[11px] mt-0.5 font-light leading-relaxed">
-                  Autosave checkpoints are stored strictly inside your browser's private storage sandbox.
-                </p>
-              </div>
-            </div>
           </div>
 
         </div>

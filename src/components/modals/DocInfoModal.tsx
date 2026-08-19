@@ -18,8 +18,8 @@ export const DocInfoModal: React.FC<DocInfoModalProps> = ({ isOpen, onClose }) =
   const activePage = state.pages.find(p => p.pageId === state.selectedPageId) || state.pages[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none">
-      <div className="bg-[#050505] border border-white/15 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none" role="presentation">
+      <div className="bg-[#050505] border border-white/15 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="doc-info-title">
         
         {/* Header */}
         <div className="h-16 px-8 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
@@ -29,9 +29,9 @@ export const DocInfoModal: React.FC<DocInfoModalProps> = ({ isOpen, onClose }) =
             </span>
             <div>
               <span className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-mono block">
-                Forensic Inspection
+                PDF Inspection
               </span>
-              <h3 className="text-base font-serif italic text-white font-normal">
+              <h3 id="doc-info-title" className="text-base font-serif italic text-white font-normal">
                 Document Metadata
               </h3>
             </div>
@@ -39,6 +39,7 @@ export const DocInfoModal: React.FC<DocInfoModalProps> = ({ isOpen, onClose }) =
           <button
             onClick={onClose}
             className="text-white/40 hover:text-white p-2 rounded-full hover:bg-white/10 cursor-pointer"
+            aria-label="Close document metadata"
           >
             <X className="w-4 h-4" />
           </button>

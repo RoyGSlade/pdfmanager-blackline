@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Download,
   ShieldCheck,
@@ -33,6 +33,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [verificationReport, setVerificationReport] = useState<VerificationReport | null>(null);
   const [generatedBytes, setGeneratedBytes] = useState<Uint8Array | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSettings(prev => ({
+        ...prev,
+        fileName: `${state.projectName || 'Document'}_copy`,
+      }));
+      setVerificationReport(null);
+      setGeneratedBytes(null);
+      setCurrentStep(0);
+    }
+  }, [isOpen, state.projectName]);
 
   if (!isOpen) return null;
 
@@ -71,15 +83,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
   };
 
   const handleDownload = () => {
-    if (generatedBytes) {
-      downloadBlob(generatedBytes, settings.fileName);
+    if (generatedBytes && verificationReport?.isValid) {
+      const safeName = settings.fileName.trim().replace(/\.pdf$/i, '') || 'Document_copy';
+      downloadBlob(generatedBytes, `${safeName}.pdf`);
       onClose();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none">
-      <div className="bg-[#050505] border border-white/15 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none" role="presentation">
+      <div className="bg-[#050505] border border-white/15 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title">
         
         {/* Header */}
         <div className="h-16 px-8 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
@@ -91,7 +104,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
               <span className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-mono block">
                 Verification Pipeline
               </span>
-              <h3 className="text-base font-serif italic text-white font-normal">
+                <h3 id="export-dialog-title" className="text-base font-serif italic text-white font-normal">
                 Safe Save & Proof Pass
               </h3>
             </div>
@@ -99,6 +112,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
           <button
             onClick={onClose}
             className="text-white/40 hover:text-white p-2 rounded-full hover:bg-white/10 cursor-pointer"
+            aria-label="Close export dialog"
           >
             <X className="w-4 h-4" />
           </button>
@@ -126,66 +140,19 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
                 </div>
               </div>
 
-              {/* Format selection */}
+              {/* Proven MVP export profile */}
               <div className="space-y-2">
                 <label className="block text-[10px] uppercase tracking-widest font-mono text-white/40">
-                  Export Interoperability Profile
+                  Export Profile
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div
-                    onClick={() => setSettings(prev => ({ ...prev, format: 'final', flattenForms: true }))}
-                    className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                      settings.format === 'final'
-                        ? 'border-white bg-white/10'
-                        : 'border-white/10 bg-white/[0.02] hover:border-white/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-xs font-mono text-white font-semibold">
-                      <span>Final Flattened PDF</span>
-                      <span className="text-[9px] uppercase tracking-widest text-emerald-400">Standard</span>
-                    </div>
-                    <p className="text-xs text-white/40 mt-2 font-light leading-relaxed">
-                      Flattens annotations and form data into permanent content streams. Ideal for sharing and filing.
-                    </p>
+                <div className="p-5 rounded-2xl border border-white bg-white/10">
+                  <div className="flex items-center justify-between text-xs font-mono text-white font-semibold">
+                    <span>Final Flattened PDF</span>
+                    <span className="text-[9px] uppercase tracking-widest text-emerald-400">MVP</span>
                   </div>
-
-                  <div
-                    onClick={() => setSettings(prev => ({ ...prev, format: 'editable', flattenForms: false }))}
-                    className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                      settings.format === 'editable'
-                        ? 'border-white bg-white/10'
-                        : 'border-white/10 bg-white/[0.02] hover:border-white/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-xs font-mono text-white font-semibold">
-                      <span>Editable Document</span>
-                    </div>
-                    <p className="text-xs text-white/40 mt-2 font-light leading-relaxed">
-                      Preserves interactive AcroForm fields and standard vector overlay objects.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quality Preset */}
-              <div className="space-y-2">
-                <label className="block text-[10px] uppercase tracking-widest font-mono text-white/40">
-                  Compression Preset
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {(['small', 'balanced', 'high'] as const).map(q => (
-                    <button
-                      key={q}
-                      onClick={() => setSettings(prev => ({ ...prev, quality: q }))}
-                      className={`py-2.5 px-4 rounded-xl border text-[10px] uppercase tracking-widest font-mono capitalize cursor-pointer transition-all ${
-                        settings.quality === q
-                          ? 'border-white bg-white/15 text-white font-semibold'
-                          : 'border-white/10 bg-white/[0.02] text-white/50 hover:text-white'
-                      }`}
-                    >
-                      {q === 'small' ? 'Compact' : q === 'balanced' ? 'Balanced' : 'High Fidelity'}
-                    </button>
-                  ))}
+                  <p className="text-xs text-white/40 mt-2 font-light leading-relaxed">
+                    Bakes supported form values and added marks into a new PDF. Interactive form preservation is not part of this MVP.
+                  </p>
                 </div>
               </div>
 
@@ -225,13 +192,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
               
               <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/20 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+                      <CheckCircle2 className={`w-7 h-7 ${verificationReport.isValid ? 'text-emerald-400' : 'text-rose-400'}`} />
                   <div>
                     <h4 className="text-base font-serif italic text-white">
-                      Proof Pass Verified
+                      {verificationReport.isValid ? 'Proof Pass Verified' : 'Proof Pass Failed'}
                     </h4>
                     <p className="text-xs text-white/50 mt-0.5 font-light">
-                      Target copy was parsed and verified with 100% integrity.
+                      {verificationReport.isValid
+                        ? 'The exported copy reopened successfully and passed its integrity checks.'
+                        : 'The exported copy did not pass every integrity check. Download is disabled.'}
                     </p>
                   </div>
                 </div>
@@ -250,7 +219,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
 
                 {verificationReport.checks.map((check, idx) => (
                   <div key={idx} className="flex items-start gap-3 text-xs font-mono">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    {check.passed ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <X className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                    )}
                     <div>
                       <span className="text-white font-medium">{check.name}: </span>
                       <span className="text-white/50">{check.detail}</span>
@@ -297,6 +270,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
             ) : (
               <button
                 onClick={handleDownload}
+                disabled={!verificationReport.isValid}
                 className="px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-mono text-[10px] uppercase tracking-[0.2em] font-bold rounded-full flex items-center gap-2 cursor-pointer shadow-xl transition-all"
               >
                 <Download className="w-3.5 h-3.5" />

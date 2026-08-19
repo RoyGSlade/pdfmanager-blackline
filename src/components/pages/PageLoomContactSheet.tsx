@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   RotateCw,
   Trash2,
@@ -10,6 +10,8 @@ import {
   FileUp,
 } from 'lucide-react';
 import { useEditor } from '../../context/EditorContext';
+import { renderPdfPageToCanvas } from '../../engine/pdfRenderer';
+import { PageNode } from '../../types';
 
 interface PageLoomContactSheetProps {
   onOpenExport: () => void;
@@ -209,17 +211,7 @@ export const PageLoomContactSheet: React.FC<PageLoomContactSheetProps> = () => {
                       transform: `rotate(${page.rotationDelta}deg)`,
                     }}
                   >
-                    <div className="p-3 w-full h-full flex flex-col justify-between text-[7px] text-gray-400 font-mono select-none">
-                      <div className="space-y-1.5">
-                        <div className="w-2/3 h-1.5 bg-gray-300 rounded" />
-                        <div className="w-full h-1 bg-gray-200 rounded" />
-                        <div className="w-5/6 h-1 bg-gray-200 rounded" />
-                        <div className="w-4/5 h-1 bg-gray-200 rounded" />
-                      </div>
-                      <div className="text-center font-serif italic text-gray-500 text-[11px]">
-                        {page.customTitle || `Page ${index + 1}`}
-                      </div>
-                    </div>
+                    <PageThumbnail page={page} pageIndex={index} />
                   </div>
 
                   {/* Quick Card Controls */}
@@ -277,5 +269,38 @@ export const PageLoomContactSheet: React.FC<PageLoomContactSheetProps> = () => {
       </div>
 
     </div>
+  );
+};
+
+const PageThumbnail: React.FC<{ page: PageNode; pageIndex: number }> = ({ page, pageIndex }) => {
+  const { state } = useEditor();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const source = state.sources.find(item => item.sourceId === page.sourceId);
+
+  useEffect(() => {
+    if (page.isBlank || !source || !canvasRef.current) return;
+    let cancelled = false;
+    renderPdfPageToCanvas(
+      source.sourceId,
+      source.bytes,
+      page.sourcePageIndex,
+      canvasRef.current,
+      0.22,
+      page.rotationDelta,
+    ).catch(() => {
+      if (!cancelled) return;
+    });
+    return () => { cancelled = true; };
+  }, [page, source]);
+
+  return (
+    <>
+      {!page.isBlank && <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-contain" aria-label={`Preview of page ${pageIndex + 1}`} />}
+      {page.isBlank && (
+        <div className="p-3 w-full h-full flex items-center justify-center text-gray-500 font-serif italic text-[11px]">
+          Blank Page
+        </div>
+      )}
+    </>
   );
 };

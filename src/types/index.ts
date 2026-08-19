@@ -139,9 +139,9 @@ export interface HistoryEntry {
 }
 
 export interface ExportSettings {
-  format: 'editable' | 'final'; // 'editable' preserves annotations, 'final' flattens
-  quality: 'small' | 'balanced' | 'high';
-  flattenForms: boolean;
+  format: 'final';
+  quality: 'balanced';
+  flattenForms: true;
   pageRange: 'all' | 'current' | 'custom';
   customPages?: number[];
   fileName: string;

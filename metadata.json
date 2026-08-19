@@ -1,6 +1,0 @@
-{
-  "name": "PDFManager — Blackline Workbench",
-  "description": "Local-first, verified PDF workstation by Underplain. Open a PDF, keep the original untouched, fill & sign, mark up, organize pages, merge & split, and export verified safe copies.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

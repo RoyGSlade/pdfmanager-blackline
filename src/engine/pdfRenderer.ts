@@ -1,12 +1,13 @@
 // PDF.js renderer wrapper for high-fidelity canvas rendering and text extraction
 import * as pdfjsLib from 'pdfjs-dist';
+// Vite emits the worker as a local static asset. Never fall back to a CDN:
+// PDFs can contain sensitive documents and rendering must work offline.
+// @ts-expect-error Vite resolves `?url` asset imports; pdfjs-dist does not ship a declaration for it.
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 // Configure worker reliably for Vite sandbox
 try {
-  if (typeof window !== 'undefined') {
-    // Use unpkg or cdnjs worker, or let pdfjs use inline worker fallback
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version || '4.10.38'}/build/pdf.worker.min.mjs`;
-  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 } catch (e) {
   console.warn('PDF.js worker setup note:', e);
 }

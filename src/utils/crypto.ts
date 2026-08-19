@@ -1,22 +1,16 @@
 // Cryptographic and utility helpers for local document verification
 
 export async function computeSha256(data: Uint8Array | ArrayBuffer): Promise<string> {
-  try {
-    const buffer = data instanceof Uint8Array ? data.buffer : data;
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch (err) {
-    console.warn('SubtleCrypto error, falling back to simple hash', err);
-    // Simple fallback hash
-    let hash = 0;
-    const view = new Uint8Array(data);
-    for (let i = 0; i < view.length; i++) {
-      hash = ((hash << 5) - hash) + view[i];
-      hash |= 0;
-    }
-    return Math.abs(hash).toString(16).padStart(16, '0') + '0000000000000000';
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('SHA-256 verification requires Web Crypto support.');
   }
+
+  // Copy views so byteOffset/byteLength are respected and digest() never sees
+  // unrelated bytes from a larger backing ArrayBuffer.
+  const buffer = data instanceof Uint8Array ? data.slice().buffer : data.slice(0);
+  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export function generateId(prefix = 'obj'): string {

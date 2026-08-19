@@ -37,6 +37,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose 
   const [strokeColor, setStrokeColor] = useState('#000000');
   const [saveToVault, setSaveToVault] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [hasInk, setHasInk] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
@@ -59,6 +60,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose 
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     isDrawingRef.current = true;
+    setHasInk(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -102,6 +104,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose 
       const ctx = canvasRef.current.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        setHasInk(false);
       }
     }
   };
@@ -145,7 +148,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose 
       }
     }
 
-    if (!finalUrl) return;
+    if (!finalUrl || (tab === 'draw' && !hasInk)) return;
 
     const targetPageId = state.selectedPageId || state.pages[0]?.pageId;
     if (!targetPageId) return;
@@ -175,8 +178,8 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none">
-      <div className="bg-[#050505] border border-white/15 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none" role="presentation">
+      <div className="bg-[#050505] border border-white/15 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="signature-dialog-title">
         
         {/* Modal Header */}
         <div className="h-16 px-8 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
@@ -186,9 +189,9 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose 
             </span>
             <div>
               <span className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-mono block">
-                Electronic Authentication
+                Signature Overlay
               </span>
-              <h3 className="text-base font-serif italic font-normal text-white">
+              <h3 id="signature-dialog-title" className="text-base font-serif italic font-normal text-white">
                 Signature Studio
               </h3>
             </div>
@@ -196,6 +199,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose 
           <button
             onClick={onClose}
             className="text-white/40 hover:text-white p-2 rounded-full hover:bg-white/10 cursor-pointer"
+            aria-label="Close signature studio"
           >
             <X className="w-4 h-4" />
           </button>
@@ -390,7 +394,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose 
                   onChange={e => setSaveToVault(e.target.checked)}
                   className="w-4 h-4 rounded text-black cursor-pointer"
                 />
-                <span>Store in local encrypted signature vault</span>
+                <span>Store in this browser for reuse</span>
               </label>
 
               <div className="flex items-center gap-2">

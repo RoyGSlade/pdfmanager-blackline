@@ -5,7 +5,6 @@ import {
   Highlighter,
   Square,
   Minus,
-  ArrowUpRight,
   Check,
   Image as ImageIcon,
   Trash2,
@@ -34,13 +33,26 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
   } = useEditor();
 
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imageError, setImageError] = React.useState<string | null>(null);
 
   const selectedObject = state.objects.find(o => state.selectedObjectIds.includes(o.id));
   const activePageId = state.selectedPageId || state.pages[0]?.pageId;
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageError(null);
     if (e.target.files && e.target.files.length > 0 && activePageId) {
       const file = e.target.files[0];
+      const isImage = file.type === 'image/png' || file.type === 'image/jpeg' || /\.(png|jpe?g)$/i.test(file.name);
+      if (!isImage) {
+        setImageError('Use a PNG or JPEG image stamp. SVG is not supported in exported PDFs.');
+        e.target.value = '';
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setImageError('Image stamps must be 10 MB or smaller.');
+        e.target.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
@@ -55,7 +67,9 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
           opacity: 1.0,
         });
       };
+      reader.onerror = () => setImageError('Could not read that image. Try another PNG or JPEG.');
       reader.readAsDataURL(file);
+      e.target.value = '';
     }
   };
 
@@ -91,12 +105,12 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
   };
 
   return (
-    <div className="h-11 bg-[#0a0a0a] border-b border-white/10 px-6 flex items-center justify-between gap-4 text-xs font-mono select-none z-10 shrink-0">
+    <div className="h-11 bg-[#0a0a0a] border-b border-white/10 px-6 flex items-center justify-between gap-4 text-xs font-mono select-none z-10 shrink-0" aria-label="Editing tools">
       
       <input
         ref={imageInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/svg+xml"
+        accept="image/png,image/jpeg"
         className="hidden"
         onChange={handleImageUpload}
       />
@@ -201,18 +215,6 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
             </button>
 
             <button
-              onClick={() => setTool('arrow')}
-              className={`p-1.5 rounded-full flex items-center transition-all cursor-pointer ${
-                state.activeTool === 'arrow'
-                  ? 'bg-white text-black'
-                  : 'text-white/60 hover:text-white hover:bg-white/5 border border-white/10'
-              }`}
-              title="Arrow (A)"
-            >
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-
-            <button
               onClick={() => imageInputRef.current?.click()}
               className="px-3 py-1 rounded-full text-white/60 hover:text-white hover:bg-white/5 border border-white/10 flex items-center gap-1.5 text-[10px] uppercase tracking-widest transition-colors cursor-pointer"
               title="Upload Stamp / Image"
@@ -231,6 +233,12 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
         )}
 
       </div>
+
+      {imageError && (
+        <span role="alert" className="text-[10px] text-rose-300 font-mono shrink-0" aria-live="polite">
+          {imageError}
+        </span>
+      )}
 
       {/* RIGHT: Selected Object Inspector Controls */}
       {selectedObject && (
@@ -287,6 +295,7 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
                   className="w-3 h-3 rounded-full border border-white/20 hover:scale-125 transition-transform cursor-pointer"
                   style={{ backgroundColor: c }}
                   title={c}
+                  aria-label={`Set ${c} color`}
                 />
               ))}
             </div>
@@ -299,6 +308,7 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
             onClick={() => bringToFront(selectedObject.id)}
             className="p-1 rounded-full text-white/60 hover:text-white cursor-pointer"
             title="Bring to Front"
+            aria-label="Bring selected object to front"
           >
             <ArrowUp className="w-3 h-3" />
           </button>
@@ -307,6 +317,7 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
             onClick={() => sendToBack(selectedObject.id)}
             className="p-1 rounded-full text-white/60 hover:text-white cursor-pointer"
             title="Send to Back"
+            aria-label="Send selected object to back"
           >
             <ArrowDown className="w-3 h-3" />
           </button>
@@ -316,6 +327,7 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
             onClick={duplicateSelectedObjects}
             className="p-1 rounded-full text-white/60 hover:text-white cursor-pointer"
             title="Duplicate"
+            aria-label="Duplicate selected object"
           >
             <Copy className="w-3 h-3" />
           </button>
@@ -325,6 +337,7 @@ export const ContextStrip: React.FC<ContextStripProps> = ({ onOpenSignatureModal
             onClick={deleteSelectedObjects}
             className="p-1 rounded-full text-red-400 hover:bg-red-400/20 cursor-pointer"
             title="Delete"
+            aria-label="Delete selected object"
           >
             <Trash2 className="w-3 h-3" />
           </button>

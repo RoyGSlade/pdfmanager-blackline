@@ -6,7 +6,6 @@ import {
   Layers,
   ShieldCheck,
   Lock,
-  RotateCcw,
   Sparkles,
   ArrowRight,
   FileCheck2,
@@ -24,13 +23,24 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
   const {
     openDocumentFromFile,
     loadSample,
-    hasRecoveryData,
-    restoreFromRecovery,
-    clearRecoveryData,
   } = useEditor();
   const [isDragging, setIsDragging] = useState(false);
   const [isLoadingSample, setIsLoadingSample] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const openPdf = async (file: File) => {
+    setFileError(null);
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setFileError('That file is not a PDF. Choose a .pdf file and try again.');
+      return;
+    }
+    try {
+      await openDocumentFromFile(file);
+    } catch {
+      setFileError('Could not open that PDF. It may be encrypted, damaged, or unsupported.');
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -47,9 +57,9 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
       if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        await openDocumentFromFile(file);
+        await openPdf(file);
       } else {
-        alert('Please select a valid PDF document.');
+        setFileError('That file is not a PDF. Choose a .pdf file and try again.');
       }
     }
   };
@@ -57,7 +67,8 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      await openDocumentFromFile(file);
+      await openPdf(file);
+      e.target.value = '';
     }
   };
 
@@ -84,7 +95,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
               <div className="h-3 w-px bg-white/10" />
               <span className="text-[10px] uppercase tracking-[0.2em] flex items-center gap-1.5 text-emerald-400 font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                VERIFIED LOCAL
+                LOCAL WORKBENCH
               </span>
             </div>
             <h1 className="font-serif italic text-3xl sm:text-5xl font-normal tracking-tight text-white">
@@ -102,7 +113,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
               className="px-5 py-2.5 bg-white text-black font-mono text-[10px] uppercase tracking-[0.2em] font-semibold rounded-full hover:bg-white/90 transition-all cursor-pointer flex items-center gap-2 shadow-lg"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Launch Workbench</span>
+              <span>Try Sample PDF</span>
             </button>
 
             <button
@@ -110,46 +121,10 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
               className="px-5 py-2.5 border border-white/20 rounded-full text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-black hover:bg-white transition-all cursor-pointer flex items-center gap-2"
             >
               <Lock className="w-3 h-3" />
-              <span>Zero Egress</span>
+              <span>No Upload</span>
             </button>
           </div>
         </div>
-
-        {/* Recovery Alert Card */}
-        {hasRecoveryData && (
-          <div className="bg-white/[0.02] border border-white/15 rounded-3xl p-6 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-                <RotateCcw className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-white/40 block mb-0.5 font-mono">
-                  State Recovery Available
-                </span>
-                <h4 className="text-sm font-serif italic text-white font-medium">
-                  Active Document Checkpoint Preserved
-                </h4>
-                <p className="text-xs text-white/50 mt-1 font-light">
-                  A previous uncommitted local editing session is available with intact page modifications.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-              <button
-                onClick={restoreFromRecovery}
-                className="flex-1 sm:flex-initial px-5 py-2 rounded-full text-[10px] uppercase tracking-widest font-semibold bg-white text-black hover:bg-white/90 transition-colors cursor-pointer"
-              >
-                Restore Session
-              </button>
-              <button
-                onClick={clearRecoveryData}
-                className="px-4 py-2 text-[10px] uppercase tracking-widest text-white/40 hover:text-white transition-colors cursor-pointer"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Primary Drag & Drop Zone */}
         <div
@@ -157,6 +132,15 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Open a PDF from this device"
           className={`relative border rounded-3xl p-12 sm:p-16 text-center cursor-pointer transition-all duration-300 ${
             isDragging
               ? 'border-white bg-white/[0.06] shadow-[0_0_50px_rgba(255,255,255,0.08)] scale-[1.005]'
@@ -185,8 +169,14 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
             </span>
           </h3>
           <p className="text-xs text-white/40 mt-3 max-w-md mx-auto font-light leading-relaxed">
-            In-memory processing exclusively. Your source files remain unmodified with cryptographic proof.
+            Runs in this browser. Your source file stays unchanged; edits are applied to a separate copy when you export.
           </p>
+
+          {fileError && (
+            <p role="alert" className="mt-4 text-xs text-rose-300 font-mono" aria-live="polite">
+              {fileError}
+            </p>
+          )}
 
           <div className="inline-flex items-center gap-6 mt-8 text-[10px] uppercase tracking-widest text-white/30 font-mono">
             <span className="flex items-center gap-2">
@@ -196,12 +186,12 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
             <span>•</span>
             <span className="flex items-center gap-2">
               <FileCheck2 className="w-3.5 h-3.5 text-white/70" />
-              <span>ISO 32000 Structure</span>
+              <span>PDF output</span>
             </span>
             <span>•</span>
             <span className="flex items-center gap-2">
               <Lock className="w-3.5 h-3.5 text-white/50" />
-              <span>Zero Network Egress</span>
+              <span>No Upload</span>
             </span>
           </div>
         </div>
@@ -268,7 +258,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
               </div>
               <h4 className="font-serif italic text-base text-white">Fill & Sign</h4>
               <p className="text-xs text-white/40 font-light leading-relaxed">
-                Interactive AcroForm controls, calligraphic signature stamps, dates, and initials.
+                Type basic field values and place signatures, dates, and checkmarks as overlays.
               </p>
             </div>
 
@@ -278,7 +268,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
               </div>
               <h4 className="font-serif italic text-base text-white">Mark Up & Annotate</h4>
               <p className="text-xs text-white/40 font-light leading-relaxed">
-                Highlighters, freehand ink, geometric shapes, typography overlays, and custom stamps.
+                Text, highlights, freehand ink, boxes, lines, and image stamps.
               </p>
             </div>
 
@@ -288,7 +278,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
               </div>
               <h4 className="font-serif italic text-base text-white">Page Loom</h4>
               <p className="text-xs text-white/40 font-light leading-relaxed">
-                Reorder, rotate 90°, delete, duplicate, merge external PDFs, or insert blank sheets.
+                Reorder, rotate, delete, duplicate, append another PDF, or insert blank sheets.
               </p>
             </div>
 
@@ -298,18 +288,18 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onOpenPrivacy }) => {
               </div>
               <h4 className="font-serif italic text-base text-white">Safe Save</h4>
               <p className="text-xs text-white/40 font-light leading-relaxed">
-                Multi-pass validation tests reopen target copy before download to ensure integrity.
+                Export a new PDF copy, then reopen it and check its structure before download.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Verification Guarantee Footer */}
+        {/* Local processing footer */}
         <div className="border border-white/10 bg-white/[0.02] rounded-2xl p-5 text-xs text-white/40 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
           <div className="flex items-center gap-3">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <span className="text-[11px] uppercase tracking-wider text-white/60">
-              ORIGINAL IMMUTABLE • ZERO EGRESS • LOCAL DETERMINISTIC PIPELINE
+              ORIGINAL UNCHANGED • LOCAL PROCESSING • EXPORT COPY
             </span>
           </div>
           <div className="text-[10px] uppercase tracking-widest text-white/30">
