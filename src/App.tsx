@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { EditorProvider, useEditor } from './context/EditorContext';
 import { Shell } from './components/layout/Shell';
 import { HomeHub } from './components/home/HomeHub';
@@ -12,6 +12,9 @@ import { DocInfoModal } from './components/modals/DocInfoModal';
 import { PrivacyModal } from './components/modals/PrivacyModal';
 import { ShortcutsModal } from './components/modals/ShortcutsModal';
 
+const SpreadsheetModal = lazy(() => import('./components/modals/SpreadsheetModal')
+  .then(module => ({ default: module.SpreadsheetModal })));
+
 const WorkbenchContent: React.FC = () => {
   const {
     state,
@@ -23,6 +26,7 @@ const WorkbenchContent: React.FC = () => {
   } = useEditor();
 
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
   const [isSignatureOpen, setIsSignatureOpen] = useState(false);
   const [isDocInfoOpen, setIsDocInfoOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
@@ -120,6 +124,7 @@ const WorkbenchContent: React.FC = () => {
   return (
     <Shell
       onOpenExport={() => setIsExportOpen(true)}
+      onOpenSpreadsheet={() => setIsSpreadsheetOpen(true)}
       onOpenDocInfo={() => setIsDocInfoOpen(true)}
       onOpenPrivacy={() => setIsPrivacyOpen(true)}
       onOpenShortcuts={() => setIsShortcutsOpen(true)}
@@ -154,6 +159,10 @@ const WorkbenchContent: React.FC = () => {
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
       />
+
+      {isSpreadsheetOpen && <Suspense fallback={null}>
+        <SpreadsheetModal key={state.sources[0].sourceId} onClose={() => setIsSpreadsheetOpen(false)} />
+      </Suspense>}
 
       <DocInfoModal
         isOpen={isDocInfoOpen}

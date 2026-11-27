@@ -9,6 +9,7 @@ import {
   ZoomIn,
   ZoomOut,
   Search,
+  Table2,
   ChevronDown,
   Download,
   Info,
@@ -23,6 +24,7 @@ import { useEditor } from '../../context/EditorContext';
 interface ShellProps {
   children: React.ReactNode;
   onOpenExport: () => void;
+  onOpenSpreadsheet: () => void;
   onOpenDocInfo: () => void;
   onOpenPrivacy: () => void;
   onOpenShortcuts: () => void;
@@ -31,6 +33,7 @@ interface ShellProps {
 export const Shell: React.FC<ShellProps> = ({
   children,
   onOpenExport,
+  onOpenSpreadsheet,
   onOpenDocInfo,
   onOpenPrivacy,
   onOpenShortcuts,
@@ -290,7 +293,7 @@ export const Shell: React.FC<ShellProps> = ({
       <div className="flex-1 flex overflow-hidden relative">
         
         {/* TASK RAIL (Left Luxury Mode Switcher) */}
-        <nav className="w-20 bg-[#050505] border-r border-white/10 flex flex-col items-center py-6 gap-6 z-20 shrink-0">
+        <nav className="w-20 bg-[#050505] border-r border-white/10 flex flex-col items-center overflow-y-auto py-4 gap-4 sm:py-6 sm:gap-6 z-20 shrink-0">
           
           {/* Select & View Tool */}
           <button
@@ -355,6 +358,16 @@ export const Shell: React.FC<ShellProps> = ({
           >
             <Layers className="w-4 h-4" />
             <span className="text-[8px] uppercase tracking-widest font-mono font-medium">Pages</span>
+          </button>
+
+          <button
+            onClick={onOpenSpreadsheet}
+            className="flex h-12 w-12 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl text-emerald-300 transition-colors hover:bg-emerald-300/10 cursor-pointer"
+            title="PDF to spreadsheet"
+            aria-label="PDF to spreadsheet"
+          >
+            <Table2 className="w-4 h-4" />
+            <span className="text-[8px] uppercase tracking-widest font-mono font-medium">Table</span>
           </button>
 
           {/* Bottom Lock Indicator */}
