@@ -57,8 +57,11 @@ The remaining manual matrix lives in
    reader;
 6. memory and responsiveness at the 100 MB input limit.
 
-Encrypted, signed, XFA, scripted, OCR, and redaction workflows are negative
+Encrypted, signed, XFA, scripted, and redaction workflows are negative
 tests until their implementations and acceptance criteria exist.
+
+The [spreadsheet acceptance checks](PDF-TO-SPREADSHEET.md) cover raster and
+selectable-text PDFs, layout correction, and CSV and Excel downloads.
 
 ## CI contract
 

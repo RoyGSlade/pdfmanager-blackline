@@ -24,6 +24,10 @@ export default defineConfig(() => {
     build: {
       rollupOptions: {
         output: {
+          assetFileNames(asset) {
+            if (asset.names.includes('eng.traineddata.gz')) return 'assets/ocr-[hash]/[name][extname]';
+            return 'assets/[name]-[hash][extname]';
+          },
           manualChunks(moduleId) {
             if (!moduleId.includes('node_modules')) return;
             if (moduleId.includes('pdf-lib') || moduleId.includes('pdfjs-dist')) return 'pdf-vendor';

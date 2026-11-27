@@ -19,11 +19,15 @@
     "check": "npm run typecheck && npm run test:unit && npm run build"
   },
   "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
     "lucide-react": "^0.546.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.0.1",
-    "react-dom": "^19.0.1"
+    "react-dom": "^19.0.1",
+    "tesseract.js": "^7.0.0",
+    "tesseract.js-core": "7.0.0",
+    "write-excel-file": "^4.1.1"
   },
   "devDependencies": {
     "@openai/sites-vite-plugin": "^0.2.0",
@@ -37,6 +41,7 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/coverage-v8": "^4.1.11",
+    "fflate": "^0.8.3",
     "jsdom": "^26.1.0",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
