@@ -57,6 +57,43 @@ npm run dev
 Open `http://localhost:3000`, choose **Try Sample PDF**, or open your own file.
 No API key or backend service is required.
 
+## Offline on Windows
+
+Use **Start PDFManager.cmd** from the installed local PDFManager folder. It
+serves the bundled app on loopback. Keep that copy available for work documents:
+some organizations restrict opening internal files on public domains even when
+the browser handles the files locally. Follow your organization's policy.
+
+## Deploy to donavencrenshaw.com
+
+```bash
+npm ci
+npm run build:domain
+npx wrangler deploy --dry-run
+```
+
+The domain build writes `dist-domain/` with Vite's
+`/pdfmanager/` base. Its canonical and social links target
+[donavencrenshaw.com/pdfmanager/](https://donavencrenshaw.com/pdfmanager/).
+The default `npm run build` still produces a root build for offline
+use. The GitHub Pages build can still set its own asset base.
+
+The live apex serves the rest of the website from GitHub Pages. The supplied
+Wrangler config is for a Cloudflare Worker route on the existing apex. Before
+activation, verify that the apex record is proxied in Cloudflare, the GitHub Pages
+origin is healthy through the proxy, and TLS is set to **Full (strict)**.
+The route covers the workbench and forwards any other prefix match to the
+existing origin. Keep the Worker first so the security headers apply to both
+HTML and assets. Once ready, run `npx wrangler deploy` from an account
+with access to the zone.
+
+Verify that HTTP redirects to HTTPS, and that HTTPS returns the expected
+canonical URL, Content-Security-Policy, X-Content-Type-Options and
+Referrer-Policy headers. Open the sample, render its pages, and export a copy
+in a fresh browser session. Also check the homepage and
+`/underplain/pdfmanager/` through the proxy. Remove the Worker route to
+roll back just the workbench.
+
 ## Quality gates
 
 ```bash

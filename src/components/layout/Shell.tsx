@@ -76,7 +76,7 @@ export const Shell: React.FC<ShellProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#050505] text-white overflow-hidden select-none">
+    <div className="flex flex-col h-dvh w-full bg-[#0a0a0c] text-white overflow-hidden select-none">
       
       {/* Hidden File Input */}
       <input
@@ -88,7 +88,7 @@ export const Shell: React.FC<ShellProps> = ({
       />
 
       {/* TOP LUXURY WORKBENCH BAR */}
-      <header className="h-14 bg-[#050505] border-b border-white/10 px-6 flex items-center justify-between gap-4 z-30 shrink-0">
+      <header className="h-14 bg-[#101013] border-b border-white/10 px-6 flex items-center justify-between gap-4 z-30 shrink-0">
         
         {/* Left Section: Monogram & Document Title */}
         <div className="flex items-center gap-4 min-w-0">
@@ -106,7 +106,7 @@ export const Shell: React.FC<ShellProps> = ({
             title="Return to Home Screen"
             aria-label="Return to PDFManager home"
           >
-            <span className="w-5 h-5 rounded-full border border-white flex items-center justify-center font-serif italic text-xs font-semibold">
+            <span className="underplain-mark">
               U
             </span>
             <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-white/80">

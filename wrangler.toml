@@ -1,0 +1,18 @@
+name = "underplain-pdfmanager"
+main = "src/hosting/sites-worker.mjs"
+compatibility_date = "2026-11-27"
+workers_dev = false
+preview_urls = false
+
+[[routes]]
+pattern = "donavencrenshaw.com/pdfmanager*"
+zone_name = "donavencrenshaw.com"
+
+[vars]
+PDFMANAGER_MOUNT_PATH = "/pdfmanager"
+
+[assets]
+directory = "./dist-domain"
+binding = "ASSETS"
+run_worker_first = true
+html_handling = "none"

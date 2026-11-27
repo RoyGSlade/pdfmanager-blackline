@@ -22,10 +22,10 @@ test.describe('PDFManager workbench smoke', () => {
   test('opens privacy details from the home screen', async ({ page }) => {
     await page.goto('./');
 
-    await page.getByRole('button', { name: 'No Upload' }).click();
-    await expect(page.getByText('Local-First & Immutability')).toBeVisible();
-    await page.getByRole('button', { name: 'Acknowledge' }).click();
-    await expect(page.getByText('Local-First & Immutability')).toBeHidden();
+    await page.getByRole('button', { name: 'Privacy & offline use' }).click();
+    await expect(page.getByRole('dialog', { name: 'Privacy & offline use' })).toBeVisible();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByRole('dialog', { name: 'Privacy & offline use' })).toBeHidden();
   });
 
   test('verifies, downloads, and reopens a clean PDF copy', async ({ page }, testInfo) => {
