@@ -113,7 +113,7 @@ The browser harness may need `npx playwright install chromium` once on a new
 machine. GitHub Actions runs install, typecheck, unit tests, browser tests, and
 the production build on every push to `main` and every pull request.
 
-Pushes to `main` also build the app with the `/pdfmanager-blackline/` base path
+With standalone GitHub Pages enabled, pushes to `main` also build the app with the `/pdfmanager-blackline/` base path
 and deploy `dist/` through the included GitHub Pages workflow.
 
 ## Repository map

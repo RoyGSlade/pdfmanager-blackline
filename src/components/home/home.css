@@ -212,6 +212,25 @@
   font-size: .74rem;
 }
 
+.underplain-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  border-top: 1px solid var(--desk-line);
+  padding-top: 6px;
+}
+
+.underplain-footer a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 5px;
+  color: var(--desk-muted);
+  font-size: .8rem;
+}
+
+.underplain-footer a:hover { color: var(--desk-paper); }
+
 @media (min-width: 670px) {
   .underplain-desk { width: min(1100px, 100% - 80px); }
   .underplain-hero {

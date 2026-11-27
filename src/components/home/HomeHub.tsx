@@ -146,6 +146,11 @@ export function HomeHub({ onOpenPrivacy }: HomeHubProps) {
             ))}
           </div>
         </section>
+        <footer className="underplain-footer">
+          <a href="https://ko-fi.com/donavencrenshaw" target="_blank" rel="noopener noreferrer">
+            Support on Ko-fi <ArrowUpRight aria-hidden="true" size={14} />
+          </a>
+        </footer>
       </div>
     </main>
   );

@@ -19,6 +19,13 @@ test.describe('PDFManager workbench smoke', () => {
     await expect(page.getByRole('button', { name: 'Pages', exact: true })).toBeVisible();
   });
 
+  test('links to Donaven’s Ko-fi page', async ({ page }) => {
+    await page.goto('./');
+
+    const support = page.getByRole('link', { name: 'Support on Ko-fi' });
+    await expect(support).toHaveAttribute('href', 'https://ko-fi.com/donavencrenshaw');
+  });
+
   test('opens privacy details from the home screen', async ({ page }) => {
     await page.goto('./');
 
