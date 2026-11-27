@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "build:domain": "vite build --base=/pdfmanager/ --outDir dist-domain",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",

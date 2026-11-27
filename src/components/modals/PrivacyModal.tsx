@@ -1,91 +1,58 @@
-import React from 'react';
-import { ShieldCheck, Lock, HardDrive, WifiOff, X } from 'lucide-react';
+import { FileCheck2, LockKeyhole, WifiOff, X } from 'lucide-react';
 
 interface PrivacyModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
+export function PrivacyModal({ isOpen, onClose }: PrivacyModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none" role="presentation">
-      <div className="bg-[#050505] border border-white/15 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="privacy-dialog-title">
-        
-        {/* Header */}
-        <div className="h-16 px-8 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
-          <div className="flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white">
-              <Lock className="w-4 h-4" />
-            </span>
-            <div>
-              <span className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-mono block">
-                Security Architecture
-              </span>
-              <h3 id="privacy-dialog-title" className="text-base font-serif italic text-white font-normal">
-                Local-First & Immutability
-              </h3>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-white/40 hover:text-white p-2 rounded-full hover:bg-white/10 cursor-pointer"
-            aria-label="Close privacy details"
-          >
-            <X className="w-4 h-4" />
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4">
+      <section
+        className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-[#42434b] bg-[#101013] shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="privacy-dialog-title"
+      >
+        <header className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
+          <h2 id="privacy-dialog-title" className="text-lg font-semibold">Privacy &amp; offline use</h2>
+          <button type="button" onClick={onClose} className="grid size-11 cursor-pointer place-items-center rounded-md text-white/70 hover:bg-white/10 hover:text-white" aria-label="Close privacy details">
+            <X aria-hidden="true" size={18} />
           </button>
-        </div>
+        </header>
 
-        {/* Content */}
-        <div className="p-8 space-y-5 text-xs font-mono">
-          
-          <div className="p-4 bg-white/[0.02] border border-white/15 rounded-2xl text-emerald-400 flex items-center gap-3.5">
-            <ShieldCheck className="w-6 h-6 shrink-0" />
+        <div className="space-y-5 px-5 py-5 text-sm leading-relaxed text-[#b7b7bf] sm:px-6">
+          <div className="flex items-start gap-3">
+            <LockKeyhole aria-hidden="true" size={19} className="mt-0.5 shrink-0 text-[#9ec7ad]" />
             <div>
-              <div className="font-serif italic text-base text-white">Local Processing</div>
-              <div className="text-[11px] text-white/50 mt-1 font-light leading-relaxed">
-                Your selected PDF is processed in this browser. The app does not send the document to a PDF service.
-              </div>
+              <h3 className="font-semibold text-[#e8e8ea]">Your PDF stays on this device</h3>
+              <p>The app loads from the site. Your browser opens, edits, and exports your PDF locally without uploading it.</p>
             </div>
           </div>
-
-          <div className="space-y-4 pt-2">
-            <div className="flex items-start gap-3.5">
-              <HardDrive className="w-4 h-4 text-white shrink-0 mt-0.5" />
-              <div>
-                <span className="text-white font-semibold">1. Source File Immutability</span>
-                <p className="text-white/40 text-[11px] mt-0.5 font-light leading-relaxed">
-                  The original source PDF bytes are marked read-only upon ingestion. Edits exist only in a separate virtual graph.
-                </p>
-              </div>
+          <div className="flex items-start gap-3">
+            <FileCheck2 aria-hidden="true" size={19} className="mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-semibold text-[#e8e8ea]">Your original stays intact</h3>
+              <p>PDFManager checks the exported PDF and saves it as a separate file.</p>
             </div>
-
-            <div className="flex items-start gap-3.5">
-              <WifiOff className="w-4 h-4 text-white shrink-0 mt-0.5" />
-              <div>
-                <span className="text-white font-semibold">2. No Document Upload</span>
-                <p className="text-white/40 text-[11px] mt-0.5 font-light leading-relaxed">
-                  The editing workflow does not upload your PDF to a cloud processing service.
-                </p>
-              </div>
-            </div>
-
           </div>
-
+          <div className="flex items-start gap-3">
+            <WifiOff aria-hidden="true" size={19} className="mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-semibold text-[#e8e8ea]">Workplace and hospital documents</h3>
+              <p>Some workplaces restrict opening work documents on external sites. If your organization permits offline use, open the local Windows copy with <strong className="text-[#e8e8ea]">Start PDFManager.cmd</strong>.</p>
+            </div>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="h-16 px-8 border-t border-white/10 bg-white/[0.02] flex items-center justify-end">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 bg-white text-black font-mono text-[10px] uppercase tracking-widest font-semibold rounded-full cursor-pointer hover:bg-white/90"
-          >
-            Acknowledge
+        <footer className="flex justify-end border-t border-white/10 px-5 py-4 sm:px-6">
+          <button type="button" onClick={onClose} className="min-h-11 cursor-pointer rounded-md bg-[#e8e8ea] px-5 text-sm font-semibold text-[#111116] hover:bg-white">
+            Done
           </button>
-        </div>
-
-      </div>
+        </footer>
+      </section>
     </div>
   );
-};
+}

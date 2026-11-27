@@ -108,9 +108,8 @@ const WorkbenchContent: React.FC = () => {
   // If no document is open, render the Home screen
   if (state.sources.length === 0) {
     return (
-      <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#08090B]">
+      <div className="h-dvh w-full flex flex-col overflow-hidden bg-[#0a0a0c]">
         <HomeHub
-          onOpenDocInfo={() => setIsDocInfoOpen(true)}
           onOpenPrivacy={() => setIsPrivacyOpen(true)}
         />
         <PrivacyModal
